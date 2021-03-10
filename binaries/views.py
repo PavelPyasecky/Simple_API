@@ -12,6 +12,17 @@ from django.contrib.auth.models import User
 import json
 
 
+def is_admin_permissions(func):
+    def wrapper(self, request):
+        if not bool(request.user and request.user.is_staff):
+            data = {
+                "detail": "You do not have permission to perform this action."
+            }
+            return Response(data=json.dumps(data), status=status.HTTP_403_FORBIDDEN)
+        return func(self, request)
+    return wrapper
+
+
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         data = request.data
@@ -52,13 +63,8 @@ class BinaryView(APIView):
         # return Response({'binary': data_keys})
         return Response({'binary': serializer.data})
 
+    @is_admin_permissions
     def post(self, request):
-        if not bool(request.user and request.user.is_staff):
-            data = {
-                "detail": "You do not have permission to perform this action."
-            }
-            return Response(data=json.dumps(data), status=status.HTTP_403_FORBIDDEN)
-
         binary = request.data.get('binary')
         serializer = BinarySerializer(data=binary)
 
@@ -82,13 +88,8 @@ class BinaryView(APIView):
 
         return Response({"success": "Binary {} changed successfully".format(binary_saved)})
 
+    @is_admin_permissions
     def delete(self, request):
-        if not bool(request.user and request.user.is_staff):
-            data = {
-                "detail": "You do not have permission to perform this action."
-            }
-            return Response(data=json.dumps(data), status=status.HTTP_403_FORBIDDEN)
-
         binary = request.data.get('binary')
         serializer = BinarySerializer(data=binary, partial=True)
         serializer.validate_key(binary)
